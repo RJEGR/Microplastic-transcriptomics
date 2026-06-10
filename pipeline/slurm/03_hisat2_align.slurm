@@ -18,13 +18,23 @@
 #SBATCH --error=logs/hisat2_aln_%A_%a.err
 
 set -euo pipefail
-module load hisat2/2.2.1 samtools/1.18 || true
+#module load hisat2/2.2.1 samtools/1.18 || true
+
+
+EXPORT=/LUSTRE/apps/bioinformatica/hisat2/
+export PATH=$PATH:$EXPORT
+
+EXPORT=/LUSTRE/apps/bioinformatica/RSEM/bin/samtools-1.3
+export PATH=$PATH:$EXPORT
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-SAMPLES="${PROJECT}/pipeline/scripts/samples.tsv"
-CLEANDIR="${PROJECT}/01_fastp"
+
+WORDIR="${PROJECT}/workdir"
+SAMPLES="${WORDIR}/samples.tsv"
+
+CLEANDIR="${WORDIR}/01_fastp"
 IDX="${PROJECT}/Reference_dir/hisat2_index/xbMagGiga1.1"
-OUTDIR="${PROJECT}/03_hisat2"
+OUTDIR="${WORDIR}/03_hisat2"
 mkdir -p "${OUTDIR}"
 
 IFS=$'\t' read -r GRUPO SAMPLE R1 R2 < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${SAMPLES}")

@@ -18,19 +18,24 @@
 #SBATCH --error=logs/rnaspades_%A_%a.err
 
 set -euo pipefail
-module load spades/4.0.0 || true     # rnaSPAdes viene en SPAdes >=3.13
+#module load spades/4.0.0 || true     # rnaSPAdes viene en SPAdes >=3.13
+
+EXPORT=/LUSTRE/apps/bioinformatica/SPAdes-3.15.5-Linux/bin/
+export PATH=$PATH:$EXPORT
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-GROUPS="${PROJECT}/pipeline/scripts/groups.tsv"
-CLEANDIR="${PROJECT}/01_fastp"
-OUTBASE="${PROJECT}/06_rnaspades"
+
+WORDIR="${PROJECT}/workdir"
+GROUPS="${WORDIR}/groups.tsv"
+CLEANDIR="${WORDIR}/01_fastp"
+OUTBASE="${WORDIR}/06_rnaspades"
 mkdir -p "${OUTBASE}"
 
 IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS}")
 
 # --- Construir argumentos --pe1-1 / --pe1-2 para cada libreria del grupo ---
 SAMP_IDS=$(awk -F'\t' -v g="${GRUPO}" '$1==g{print $2}' \
-            "${PROJECT}/pipeline/scripts/samples.tsv")
+            "${WORDIR}/samples.tsv")
 
 ARGS=()
 i=1

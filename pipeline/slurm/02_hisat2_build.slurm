@@ -17,7 +17,12 @@
 #SBATCH --error=logs/hisat2_build_%j.err
 
 set -euo pipefail
-module load hisat2/2.2.1 || true
+
+#module load hisat2/2.2.1 || true
+
+EXPORT=/LUSTRE/apps/bioinformatica/hisat2/
+export PATH=$PATH:$EXPORT
+
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
 REF_GZ="${PROJECT}/Reference_dir/GCF_963853765.1_xbMagGiga1.1_genomic.fna.gz"

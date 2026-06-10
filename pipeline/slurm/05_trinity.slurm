@@ -9,7 +9,7 @@
 #   - Trinity acepta lecturas concatenadas con coma.
 ###############################################################################
 #SBATCH --job-name=trinity
-#SBATCH --partition=cicese-large
+#SBATCH --partition=cicese
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=256G
@@ -19,12 +19,17 @@
 #SBATCH --error=logs/trinity_%A_%a.err
 
 set -euo pipefail
-module load trinity/2.15.1 jellyfish bowtie2 salmon samtools || true
+
+module load trinityrnaseq-v2.15.1 || true
+
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-GROUPS="${PROJECT}/pipeline/scripts/groups.tsv"
-CLEANDIR="${PROJECT}/01_fastp"
-OUTBASE="${PROJECT}/05_trinity"
+
+WORDIR="${PROJECT}/workdir"
+GROUPS="${WORDIR}/groups.tsv"
+
+CLEANDIR="${WORDIR}/01_fastp"
+OUTBASE="${WORDIR}/05_trinity"
 mkdir -p "${OUTBASE}"
 
 IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS}")
@@ -33,7 +38,7 @@ IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GR
 # samples.tsv contiene los nombres limpios; re-derivamos los paths de fastp.
 # Lista de sample_ids para este grupo:
 SAMP_IDS=$(awk -F'\t' -v g="${GRUPO}" '$1==g{print $2}' \
-            "${PROJECT}/pipeline/scripts/samples.tsv")
+            "${WORDIR}/samples.tsv")
 
 LEFT=""; RIGHT=""
 for S in ${SAMP_IDS}; do

@@ -2,54 +2,54 @@
 ###############################################################################
 # 00_parse_manifest.sh
 # ----------------------------------------------------------------------------
-# Lee el archivo Manifest.tsv (5 columnas: idx, grupo, replica, R1, R2) y
-# genera dos artefactos:
-#   1) samples.tsv  -> tabla limpia (grupo, sample_id, R1, R2)  para los
-#                      array jobs de SLURM (lectura por SLURM_ARRAY_TASK_ID).
-#   2) groups.tsv   -> tabla colapsada por grupo biologico (Ch14, EP08, Se17,
-#                      SES) usada por Trinity y rnaSPAdes en modo pooled.
+# Reads Manifest.tsv produced by 00_parse_filenames.sh
+# (columns: idx, grupo, replica, R1, R2) and writes two artifacts:
 #
-# Uso:
-#   bash 00_parse_manifest.sh <ruta/Manifest.tsv> <ruta/output_dir>
+#   1) samples.tsv  -> grupo, replica, R1, R2  (one row per library;
+#                      indexed by SLURM_ARRAY_TASK_ID in array jobs)
+#   2) groups.tsv   -> grupo, R1_csv, R2_csv   (paths joined per biological
+#                      group for Trinity --left/--right and rnaSPAdes pooled)
 #
-# Salida esperada (samples.tsv):
-#   grupo<TAB>sample_id<TAB>R1<TAB>R2
+# Usage:
+#   bash 00_parse_manifest.sh <Manifest.tsv> [workdir]
+#   bash 00_parse_filenames.sh < filenames.txt | bash 00_parse_manifest.sh -
 ###############################################################################
 set -euo pipefail
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-MANIFEST="${1:-${SCRIPT_DIR}/../../Manifest.tsv}"
-OUTDIR="${2:-./}"
-mkdir -p "${OUTDIR}"
+MANIFEST="${1:--}"          # accepts a file path or '-' for stdin
+WORKDIR="${2:-${PWD}/workdir}"
 
-SAMPLES="${OUTDIR}/samples.tsv"
-GROUPS="${OUTDIR}/groups.tsv"
+mkdir -p "${WORKDIR}"
+SAMPLES="${WORKDIR}/samples.tsv"
+GROUPS_TSV="${WORKDIR}/groups.tsv"
 
-# --- Validacion ------------------------------------------------------------
-[[ -s "${MANIFEST}" ]] || { echo "ERROR: Manifest vacio o inexistente: ${MANIFEST}"; exit 1; }
+if [[ "${MANIFEST}" != "-" ]]; then
+    [[ -s "${MANIFEST}" ]] || { echo "ERROR: Manifest vacio o inexistente: ${MANIFEST}"; exit 1; }
+fi
 
-# --- samples.tsv : una linea por libreria paired-end ------------------------
+# --- samples.tsv : one row per paired-end library ---------------------------
+# Input cols: idx(1) grupo(2) replica(3) R1(4) R2(5); skip header row
 awk -F'\t' 'BEGIN{OFS="\t"}
-    # Col1=idx, Col2=grupo, Col3=sample_id, Col4=R1, Col5=R2
+    NR==1 { next }
     NF>=5 && $4 ~ /\.f(ast)?q\.gz$/ && $5 ~ /\.f(ast)?q\.gz$/ {
         print $2, $3, $4, $5
     }' "${MANIFEST}" > "${SAMPLES}"
 
 N=$(wc -l < "${SAMPLES}")
-echo "[parse] ${N} librerias paired-end registradas en ${SAMPLES}"
+echo "[parse] ${N} paired-end libraries -> ${SAMPLES}"
 
-# --- groups.tsv : concatenacion comma-separated R1/R2 por grupo -------------
-# Necesario para Trinity --left A,B,C --right A',B',C' y rnaSPAdes pooled
+# --- groups.tsv : comma-joined R1/R2 paths per biological group -------------
+# Required for Trinity --left A,B,C --right X,Y,Z and rnaSPAdes pooled mode
 awk -F'\t' 'BEGIN{OFS="\t"}
     { r1[$1]=(r1[$1]?r1[$1]",":"")$3; r2[$1]=(r2[$1]?r2[$1]",":"")$4 }
     END { for (g in r1) print g, r1[g], r2[g] }' "${SAMPLES}" \
-  | sort > "${GROUPS}"
+  | sort > "${GROUPS_TSV}"
 
-NG=$(wc -l < "${GROUPS}")
-echo "[parse] ${NG} grupos biologicos consolidados en ${GROUPS}"
+NG=$(wc -l < "${GROUPS_TSV}")
+echo "[parse] ${NG} biological groups -> ${GROUPS}"
 
-# --- Reporte rapido --------------------------------------------------------
-printf "\n--- samples.tsv (preview) ---\n"
+# --- Quick preview ----------------------------------------------------------
+printf "\n--- samples.tsv ---\n"
 column -t -s $'\t' "${SAMPLES}" | head
-printf "\n--- groups.tsv  (preview) ---\n"
-column -t -s $'\t' "${GROUPS}" | head
+printf "\n--- groups.tsv ---\n"
+column -t -s $'\t' "${GROUPS_TSV}" | head

@@ -28,8 +28,22 @@ pipeline/
 ## Lanzamiento
 
 ```bash
+PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
+#PROJECT="/Users/rjegr/Documents/GitHub/Microplastic-transcriptomics"
+EXPORT="${PROJECT}/pipeline/slurm"
+chmod +x "${EXPORT}/"*.slurm
+export PATH=$PATH:$EXPORT
+EXPORT="${PROJECT}/pipeline/scripts"
+chmod +x "${EXPORT}/"*.sh
+export PATH=$PATH:$EXPORT
+```
+
+```bash
 # Una sola línea — el master_launcher hace parsing + sbatch + dependencias
-bash pipeline/scripts/master_launcher.sh /ruta/a/Manifest.tsv
+ls -1 *gz > filenames.txt
+cat filenames.txt | bash 00_parse_filenames.sh > Manifest.tsv
+
+master_launcher.sh Manifest.tsv
 ```
 
 ## Genoma de referencia

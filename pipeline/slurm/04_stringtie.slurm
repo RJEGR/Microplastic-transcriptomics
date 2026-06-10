@@ -20,13 +20,19 @@
 #SBATCH --error=logs/stringtie_%A_%a.err
 
 set -euo pipefail
-module load stringtie/2.2.1 || true
+
+EXPORT=/LUSTRE/apps/bioinformatica/stringtie/
+export PATH=$PATH:$EXPORT
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-SAMPLES="${PROJECT}/pipeline/scripts/samples.tsv"
-BAMDIR="${PROJECT}/03_hisat2"
+
+WORDIR="${PROJECT}/workdir"
+
+SAMPLES="${WORDIR}/samples.tsv"
+
+BAMDIR="${WORDIR}/03_hisat2"
 GTF_REF="${PROJECT}/Reference_dir/hisat2_index/xbMagGiga1.1.gtf"
-OUTDIR="${PROJECT}/04_stringtie/per_sample"
+OUTDIR="${WORDIR}/04_stringtie/per_sample"
 mkdir -p "${OUTDIR}"
 
 IFS=$'\t' read -r GRUPO SAMPLE R1 R2 < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${SAMPLES}")

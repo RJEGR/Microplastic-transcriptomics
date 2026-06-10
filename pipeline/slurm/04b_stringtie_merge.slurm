@@ -14,11 +14,21 @@
 #SBATCH --error=logs/stringtie_merge_%j.err
 
 set -euo pipefail
-module load stringtie/2.2.1 gffcompare/0.12.6 || true
+#module load stringtie/2.2.1 gffcompare/0.12.6 || true
+
+EXPORT=/LUSTRE/apps/bioinformatica/stringtie/
+export PATH=$PATH:$EXPORT
+#EXPORT=/LUSTRE/bioinformatica_data/genomica_funcional/apps/gffread
+#export PATH=$PATH:$EXPORT
+EXPORT=/LUSTRE/bioinformatica_data/genomica_funcional/apps/gffcompare
+export PATH=$PATH:$EXPORT
+
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-PER_SAMP="${PROJECT}/04_stringtie/per_sample"
-MERGEDIR="${PROJECT}/04_stringtie/merged"
+WORDIR="${PROJECT}/workdir"
+
+PER_SAMP="${WORDIR}/04_stringtie/per_sample"
+MERGEDIR="${WORDIR}/04_stringtie/merged"
 GTF_REF="${PROJECT}/Reference_dir/hisat2_index/xbMagGiga1.1.gtf"
 mkdir -p "${MERGEDIR}"
 

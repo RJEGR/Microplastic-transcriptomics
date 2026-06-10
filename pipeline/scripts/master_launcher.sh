@@ -13,6 +13,8 @@
 set -euo pipefail
 
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
+WORDIR="${PROJECT}/workdir"
+
 SLURM_DIR="${PROJECT}/pipeline/slurm"
 SCRIPTS="${PROJECT}/pipeline/scripts"
 LOGS="${PROJECT}/pipeline/logs"
@@ -27,10 +29,12 @@ echo "Manifest: ${MANIFEST}"
 echo "===================================================================="
 
 # -- 0) Parsing local (no SLURM, segundos) ----------------------------------
-bash "${SCRIPTS}/00_parse_manifest.sh" "${MANIFEST}" "${SCRIPTS}"
 
-NSAMP=$(wc -l < "${SCRIPTS}/samples.tsv")
-NGRP=$(wc -l < "${SCRIPTS}/groups.tsv")
+bash "${SCRIPTS}/00_parse_manifest.sh" ../"${MANIFEST}" "${WORDIR}"
+
+NSAMP=$(wc -l < "${WORDIR}/samples.tsv")
+NGRP=$(wc -l < "${WORDIR}/groups.tsv")
+
 echo "  -> ${NSAMP} muestras, ${NGRP} grupos"
 
 # Ajustar dinamicamente el rango del array si difiere de 12

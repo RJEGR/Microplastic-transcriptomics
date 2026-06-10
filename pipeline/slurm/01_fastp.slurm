@@ -23,13 +23,18 @@
 #SBATCH --mail-user=rgomez41@uabc.edu.mx
 
 set -euo pipefail
-module load fastp/0.23.4 || true     # ajustar a `module avail` del cluster
+
+FASTQC=/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/Software
+export PATH=$PATH:$FASTQC
 
 # --- Configuracion ---------------------------------------------------------
+
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-SAMPLES="${PROJECT}/pipeline/scripts/samples.tsv"
-OUTDIR="${PROJECT}/01_fastp"
-QCDIR="${OUTDIR}/qc_reports"
+
+WORDIR="${PROJECT}/workdir"
+SAMPLES="${WORDIR}/samples.tsv"
+OUTDIR="${WORDIR}/01_fastp"
+QCDIR="${WORDIR}/qc_reports"
 mkdir -p "${OUTDIR}" "${QCDIR}"
 
 # --- Extraer fila correspondiente al SLURM_ARRAY_TASK_ID -------------------

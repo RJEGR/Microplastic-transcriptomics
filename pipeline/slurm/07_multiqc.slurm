@@ -14,14 +14,19 @@
 set -euo pipefail
 module load multiqc/1.25 || true
 
+EXPORT=/LUSTRE/apps/Anaconda/2023/miniconda3/bin/
+export PATH=$PATH:$EXPORT
+
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
-REPORT_DIR="${PROJECT}/00_multiqc"
+WORDIR="${PROJECT}/workdir"
+
+REPORT_DIR="${WORDIR}/00_multiqc"
 mkdir -p "${REPORT_DIR}"
 
 multiqc \
-    "${PROJECT}/01_fastp/qc_reports" \
-    "${PROJECT}/03_hisat2" \
-    "${PROJECT}/04_stringtie/merged" \
+    "${WORDIR}/01_fastp/qc_reports" \
+    "${WORDIR}/03_hisat2" \
+    "${WORDIR}/04_stringtie/merged" \
     -o "${REPORT_DIR}" \
     -n "microplastics_multiqc" \
     --force
