@@ -43,8 +43,35 @@ export PATH=$PATH:$EXPORT
 ls -1 *gz > filenames.txt
 cat filenames.txt | bash 00_parse_filenames.sh > Manifest.tsv
 
-master_launcher.sh Manifest.tsv
+# IMPORTANTE: master_launcher.sh ahora bloquea durante el build del indice
+# HISAT2 (sbatch --wait, ver "Cambios recientes" abajo). Lanzar bajo
+# nohup/tmux/screen si la sesion puede cerrarse antes de que termine.
+nohup bash master_launcher.sh Manifest.tsv > pipeline/logs/launcher.log 2>&1 &
 ```
+
+## Cambios recientes (2026-06-19)
+
+- **`02_hisat2_build.slurm`**: el filtro `zcat "${GTF_GZ}" || grep -v 'transcript_id ""'`
+  usaba `||` en vez de `|`, así que `grep` nunca recibía el GTF descomprimido y
+  generaba un archivo vacío/corrupto. Corregido a un pipe real; el GTF
+  filtrado sigue guardándose en `${IDX_DIR}/${PREFIX}.gtf`.
+- **`master_launcher.sh`**: el build del índice ya no se encadena con
+  `--dependency=afterok`. Si fallaba, el job de alineamiento quedaba
+  bloqueado para siempre en estado `DependencyNeverSatisfied` (la condición
+  nunca podía cumplirse). Ahora se ejecuta de forma **síncrona** con
+  `sbatch --wait`, y el launcher aborta con un mensaje claro si el build
+  falla, antes de gastar cupo en fastp/align con un índice roto.
+- **`03_hisat2_align.slurm`**: dimensionado para nodos dedicados de 24
+  cores / 100 GB RAM — `--cpus-per-task=20 --mem=90G`, cupo de array
+  `%12` (un nodo casi completo por tarea). Se corrigió además que
+  `samtools sort -m` es memoria **por hilo**: con 4 hilos a 20G cada uno
+  el job pedía hasta 80 GB solo para el sort, sobre una reserva total de
+  32 GB, causando OOM-kill. Los hilos ahora se reparten entre `hisat2`
+  (alineador) y `samtools sort` (que corren en paralelo dentro del mismo
+  pipe) en vez de asignarse el total de `cpus-per-task` a ambos a la vez.
+- Los tres pasos de `03_hisat2_align.slurm` (alineamiento, índice BAM,
+  flagstat) ahora son idempotentes — cada uno se omite si su salida ya
+  existe, igual que en `01_fastp.slurm`.
 
 ## Genoma de referencia
 

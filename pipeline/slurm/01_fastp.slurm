@@ -13,7 +13,7 @@
 #SBATCH --partition=cicese
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --time=06:00:00
 #SBATCH --array=1-12%6                      # 12 muestras, max 6 concurrentes

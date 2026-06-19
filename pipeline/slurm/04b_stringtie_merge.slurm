@@ -18,8 +18,10 @@ set -euo pipefail
 
 EXPORT=/LUSTRE/apps/bioinformatica/stringtie/
 export PATH=$PATH:$EXPORT
+
 #EXPORT=/LUSTRE/bioinformatica_data/genomica_funcional/apps/gffread
 #export PATH=$PATH:$EXPORT
+
 EXPORT=/LUSTRE/bioinformatica_data/genomica_funcional/apps/gffcompare
 export PATH=$PATH:$EXPORT
 

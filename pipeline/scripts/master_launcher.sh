@@ -37,12 +37,20 @@ NGRP=$(wc -l < "${WORDIR}/groups.tsv")
 
 echo "  -> ${NSAMP} muestras, ${NGRP} grupos"
 
+# Especificaciones del cluster local dedicado: 48 nodos, 24 cores y 100GB
+# RAM por nodo. 03_hisat2_align ocupa ~1 nodo completo por tarea (ver su
+# propio #SBATCH), asi que su cupo de array puede ir hasta NODES_TOTAL sin
+# competir por recursos (uso exclusivo del grupo).
+NODES_TOTAL=48
+
 # Ajustar dinamicamente el rango del array si difiere de 12
-sed -i.bak "s|^#SBATCH --array=1-[0-9]*%[0-9]*|#SBATCH --array=1-${NSAMP}%6|" \
+sed -i.bak "s|^#SBATCH --array=1-[0-9]*%[0-9]*|#SBATCH --array=1-${NSAMP}%3|" \
     "${SLURM_DIR}/01_fastp.slurm" \
-    "${SLURM_DIR}/03_hisat2_align.slurm" \
     "${SLURM_DIR}/04_stringtie.slurm" \
     "${SLURM_DIR}/04c_stringtie_quant.slurm"
+ALN_CAP=$(( NSAMP < NODES_TOTAL ? NSAMP : NODES_TOTAL ))
+sed -i.bak "s|^#SBATCH --array=1-[0-9]*%[0-9]*|#SBATCH --array=1-${NSAMP}%${ALN_CAP}|" \
+    "${SLURM_DIR}/03_hisat2_align.slurm"
 sed -i.bak "s|^#SBATCH --array=1-[0-9]*|#SBATCH --array=1-${NGRP}|" \
     "${SLURM_DIR}/05_trinity.slurm" \
     "${SLURM_DIR}/06_rnaspades.slurm"
@@ -51,15 +59,25 @@ sed -i.bak "s|^#SBATCH --array=1-[0-9]*|#SBATCH --array=1-${NGRP}|" \
 JID_FASTP=$(sbatch --parsable "${SLURM_DIR}/01_fastp.slurm")
 echo "  [submit] fastp           jobid=${JID_FASTP}"
 
-# -- 2) HISAT2 build (independiente de fastp) ------------------------------
-JID_IDX=$(sbatch --parsable "${SLURM_DIR}/02_hisat2_build.slurm")
-echo "  [submit] hisat2_build    jobid=${JID_IDX}"
+# -- 2) HISAT2 build (SINCRONO) ---------------------------------------------
+# El indice es un prerequisito rapido y unico: en vez de encadenarlo por
+# --dependency=afterok (que deja al hijo en DependencyNeverSatisfied para
+# siempre si el build falla), lo corremos aqui bloqueando con sbatch --wait.
+# Si falla, abortamos antes de gastar cupo en fastp/align con un indice roto.
+# NOTA: este script debe seguir corriendo (nohup/tmux/screen) mientras dura
+# el build; los pasos restantes se siguen enviando de forma asincrona.
+echo "  [submit] hisat2_build    (sbatch --wait, bloqueante)"
+if ! sbatch --wait "${SLURM_DIR}/02_hisat2_build.slurm"; then
+    echo "  [ERROR] hisat2_build fallo. Revisar logs/hisat2_build_*.err antes de continuar." >&2
+    exit 1
+fi
+echo "  [OK] indice HISAT2 listo"
 
-# -- 3) HISAT2 align (depende de fastp Y de indice) ------------------------
+# -- 3) HISAT2 align (depende solo de fastp; el indice ya esta garantizado) -
 JID_ALN=$(sbatch --parsable \
-    --dependency=afterok:${JID_FASTP}:${JID_IDX} \
+    --dependency=afterok:${JID_FASTP} \
     "${SLURM_DIR}/03_hisat2_align.slurm")
-echo "  [submit] hisat2_align    jobid=${JID_ALN}    [dep ${JID_FASTP},${JID_IDX}]"
+echo "  [submit] hisat2_align    jobid=${JID_ALN}    [dep ${JID_FASTP}]"
 
 # -- 4) StringTie per-sample -----------------------------------------------
 JID_STIE=$(sbatch --parsable --dependency=afterok:${JID_ALN} \
