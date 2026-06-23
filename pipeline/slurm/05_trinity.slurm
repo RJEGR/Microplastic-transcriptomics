@@ -9,11 +9,11 @@
 #   - Trinity acepta lecturas concatenadas con coma.
 ###############################################################################
 #SBATCH --job-name=trinity
-#SBATCH --partition=cicese
+#SBATCH --partition=d30
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=32
-#SBATCH --mem=256G
-#SBATCH --time=72:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
+#SBATCH --time=30:00:00
 #SBATCH --array=1-4                         # n grupos biologicos
 #SBATCH --output=logs/trinity_%A_%a.out
 #SBATCH --error=logs/trinity_%A_%a.err
@@ -26,13 +26,13 @@ module load trinityrnaseq-v2.15.1 || true
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
 
 WORDIR="${PROJECT}/workdir"
-GROUPS="${WORDIR}/groups.tsv"
+GROUPS_TSV="${WORDIR}/groups.tsv"
 
 CLEANDIR="${WORDIR}/01_fastp"
 OUTBASE="${WORDIR}/05_trinity"
 mkdir -p "${OUTBASE}"
 
-IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS}")
+IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS_TSV}")
 
 # --- Sustituir rutas crudas por las limpias del paso 01 --------------------
 # samples.tsv contiene los nombres limpios; re-derivamos los paths de fastp.

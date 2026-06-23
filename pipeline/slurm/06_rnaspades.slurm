@@ -8,11 +8,11 @@
 #   - Permite k-mer multiple (default: -k 25,55 para reads 150 pb)
 ###############################################################################
 #SBATCH --job-name=rnaspades
-#SBATCH --partition=cicese
+#SBATCH --partition=d30
 #SBATCH --nodes=1
-#SBATCH --cpus-per-task=24
-#SBATCH --mem=128G
-#SBATCH --time=48:00:00
+#SBATCH --cpus-per-task=20
+#SBATCH --mem=40G
+#SBATCH --time=30:00:00
 #SBATCH --array=1-4
 #SBATCH --output=logs/rnaspades_%A_%a.out
 #SBATCH --error=logs/rnaspades_%A_%a.err
@@ -26,12 +26,12 @@ export PATH=$PATH:$EXPORT
 PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
 
 WORDIR="${PROJECT}/workdir"
-GROUPS="${WORDIR}/groups.tsv"
+GROUPS_TSV="${WORDIR}/groups.tsv"
 CLEANDIR="${WORDIR}/01_fastp"
 OUTBASE="${WORDIR}/06_rnaspades"
 mkdir -p "${OUTBASE}"
 
-IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS}")
+IFS=$'\t' read -r GRUPO R1_CSV R2_CSV < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${GROUPS_TSV}")
 
 # --- Construir argumentos --pe1-1 / --pe1-2 para cada libreria del grupo ---
 SAMP_IDS=$(awk -F'\t' -v g="${GRUPO}" '$1==g{print $2}' \

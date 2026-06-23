@@ -11,7 +11,7 @@
 # por el sort de samtools, que reserva memoria POR HILO.
 ###############################################################################
 #SBATCH --job-name=hisat2_aln
-#SBATCH --partition=cicese
+#SBATCH --partition=d30
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=20

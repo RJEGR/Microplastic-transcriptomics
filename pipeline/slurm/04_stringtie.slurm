@@ -39,12 +39,14 @@ IFS=$'\t' read -r GRUPO SAMPLE R1 R2 < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${SAM
 BAM="${BAMDIR}/${SAMPLE}.sorted.bam"
 GTF_OUT="${OUTDIR}/${SAMPLE}.gtf"
 
-[[ -s "${GTF_OUT}" ]] && { echo "[skip] ${GTF_OUT}"; exit 0; }
+if [[ -s "${GTF_OUT}" ]]; then
+    echo "[skip] ${GTF_OUT} ya existe"
+else
+    stringtie "${BAM}" \
+        -G "${GTF_REF}" \
+        -o "${GTF_OUT}" \
+        -p "${SLURM_CPUS_PER_TASK}" \
+        -A "${OUTDIR}/${SAMPLE}.gene_abund.tab"
 
-stringtie "${BAM}" \
-    -G "${GTF_REF}" \
-    -o "${GTF_OUT}" \
-    -p "${SLURM_CPUS_PER_TASK}" \
-    -A "${OUTDIR}/${SAMPLE}.gene_abund.tab"
-
-echo "[OK] ${SAMPLE} -> ${GTF_OUT}"
+    echo "[OK] ${SAMPLE} -> ${GTF_OUT}"
+fi

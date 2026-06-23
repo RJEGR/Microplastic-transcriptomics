@@ -9,7 +9,7 @@
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
-#SBATCH --time=03:00:00
+#SBATCH --time=06:00:00
 #SBATCH --output=logs/stringtie_merge_%j.out
 #SBATCH --error=logs/stringtie_merge_%j.err
 
@@ -34,16 +34,22 @@ MERGEDIR="${WORDIR}/04_stringtie/merged"
 GTF_REF="${PROJECT}/Reference_dir/hisat2_index/xbMagGiga1.1.gtf"
 mkdir -p "${MERGEDIR}"
 
-# Lista de GTFs por muestra
-ls "${PER_SAMP}"/*.gtf > "${MERGEDIR}/gtf_list.txt"
+MERGED_GTF="${MERGEDIR}/merged.gtf"
 
-# --- Merge -----------------------------------------------------------------
-stringtie --merge \
-    -G "${GTF_REF}" \
-    -o "${MERGEDIR}/merged.gtf" \
-    "${MERGEDIR}/gtf_list.txt"
+if [[ -s "${MERGED_GTF}" ]]; then
+    echo "[skip] ${MERGED_GTF} ya existe"
+else
+    # Lista de GTFs por muestra
+    ls "${PER_SAMP}"/*.gtf > "${MERGEDIR}/gtf_list.txt"
 
-# --- Compara assembly merged vs anotacion oficial (sensibilidad isoformas) -
-gffcompare -r "${GTF_REF}" -o "${MERGEDIR}/gffcmp" "${MERGEDIR}/merged.gtf"
+    # --- Merge ---------------------------------------------------------------
+    stringtie --merge \
+        -G "${GTF_REF}" \
+        -o "${MERGED_GTF}" \
+        "${MERGEDIR}/gtf_list.txt"
 
-echo "[OK] merged.gtf con $(grep -c $'\ttranscript\t' "${MERGEDIR}/merged.gtf") transcritos"
+    # --- Compara assembly merged vs anotacion oficial (sensibilidad isoformas)
+    gffcompare -r "${GTF_REF}" -o "${MERGEDIR}/gffcmp" "${MERGED_GTF}"
+
+    echo "[OK] merged.gtf con $(grep -c $'\ttranscript\t' "${MERGED_GTF}") transcritos"
+fi

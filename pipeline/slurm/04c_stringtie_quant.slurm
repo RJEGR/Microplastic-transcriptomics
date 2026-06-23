@@ -8,7 +8,7 @@
 #SBATCH --partition=cicese
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G
-#SBATCH --time=04:00:00
+#SBATCH --time=06:00:00
 #SBATCH --array=1-12%6
 #SBATCH --output=logs/stie_quant_%A_%a.out
 #SBATCH --error=logs/stie_quant_%A_%a.err
@@ -32,13 +32,18 @@ mkdir -p "${OUTDIR}"
 IFS=$'\t' read -r GRUPO SAMPLE R1 R2 < <(sed -n "${SLURM_ARRAY_TASK_ID}p" "${SAMPLES}")
 BAM="${BAMDIR}/${SAMPLE}.sorted.bam"
 SAMP_DIR="${OUTDIR}/${SAMPLE}"
+GTF_OUT="${SAMP_DIR}/${SAMPLE}.gtf"
 mkdir -p "${SAMP_DIR}"
 
-stringtie -e -B \
-    -G "${MERGED_GTF}" \
-    -o "${SAMP_DIR}/${SAMPLE}.gtf" \
-    -A "${SAMP_DIR}/${SAMPLE}.gene_abund.tab" \
-    -p "${SLURM_CPUS_PER_TASK}" \
-    "${BAM}"
+if [[ -s "${GTF_OUT}" ]]; then
+    echo "[skip] ${GTF_OUT} ya existe"
+else
+    stringtie -e -B \
+        -G "${MERGED_GTF}" \
+        -o "${GTF_OUT}" \
+        -A "${SAMP_DIR}/${SAMPLE}.gene_abund.tab" \
+        -p "${SLURM_CPUS_PER_TASK}" \
+        "${BAM}"
 
-echo "[OK] ${SAMPLE} cuantificado (Ballgown / prepDE compatible)"
+    echo "[OK] ${SAMPLE} cuantificado (Ballgown / prepDE compatible)"
+fi
