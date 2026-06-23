@@ -46,7 +46,7 @@ awk -F'\t' 'BEGIN{OFS="\t"}
   | sort > "${GROUPS_TSV}"
 
 NG=$(wc -l < "${GROUPS_TSV}")
-echo "[parse] ${NG} biological groups -> ${GROUPS}"
+echo "[parse] ${NG} biological groups -> ${GROUPS_TSV}"
 
 # --- Quick preview ----------------------------------------------------------
 printf "\n--- samples.tsv ---\n"
