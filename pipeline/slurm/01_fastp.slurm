@@ -34,7 +34,7 @@ PROJECT="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/microplastics"
 WORDIR="${PROJECT}/workdir"
 SAMPLES="${WORDIR}/samples.tsv"
 OUTDIR="${WORDIR}/01_fastp"
-QCDIR="${WORDIR}/qc_reports"
+QCDIR="${OUTDIR}/qc_reports"
 mkdir -p "${OUTDIR}" "${QCDIR}"
 
 # --- Extraer fila correspondiente al SLURM_ARRAY_TASK_ID -------------------
