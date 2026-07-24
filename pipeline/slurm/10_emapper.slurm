@@ -17,17 +17,40 @@
 #
 # Dependencia: afterok:<jobid_transdecoder>  (09_transdecoder.slurm)
 ###############################################################################
-#SBATCH --job-name=emapper
+#SBATCH --job-name=emapper_mp
 #SBATCH --partition=cicese
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=20
-#SBATCH --mem=100G
-#SBATCH --time=24:00:00
-#SBATCH --mail-type=BEGIN,END,FAIL
-#SBATCH --mail-user=rgomez@uabc.edu.mx
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=64G
+#SBATCH --time=06:00:00
 #SBATCH --output=logs/emapper_%j.out
 #SBATCH --error=logs/emapper_%j.err
+#
+# ----------------------------------------------------------------------------
+# Dimensionamiento y particion (2026-07-16, cluster hpc_omica CICESE):
+#
+#   Nodos observados: 24 CPU / 128 GB c/u. ~4 idle (nodo[8,10-11,13...]),
+#   5+ en DOWN/DRAIN, 4 en ALLOC. Ver sinfo del dia.
+#
+#   Se cambio --partition=cicese -> d45 porque el usuario 'rgomez' bajo la
+#   cuenta 'clarissa' SOLO tiene asociacion SLURM con d15 y d45 (verificado
+#   con: sacctmgr show assoc user=$USER). En cualquier otra particion SLURM
+#   rechaza con "Nodes required for job are DOWN, DRAINED or reserved for
+#   jobs in higher priority partitions" -- mensaje enganoso: los nodos
+#   existen pero la cuenta no tiene privilegio para usarlos ahi.
+#     d15: MaxJobs=2 concurrentes, 15 dias timelimit.
+#     d45: sin limite de jobs, 45 dias timelimit.  <- eleccion segura.
+#
+#   eggNOG-mapper -m diamond: ~4-6 GB/thread + .dmnd v5 ~10 GB.
+#   Con 16 threads: RSS pico esperado 40-55 GB -> 64 GB deja ~15% de margen.
+#
+#   Diagnostico si sigue en PENDING:
+#     squeue -u \$USER -o '%.10i %.10P %.20j %.8T %.10M %.20R'
+#     sinfo -o '%.15N %.10P %.6t %.10c %.10m' | grep -E 'd30|idle'
+#     sprio -j \$JOBID          # score de prioridad
+#     scontrol show job \$JOBID # razon detallada del PENDING
+# ----------------------------------------------------------------------------
 
 set -euo pipefail
 
@@ -49,7 +72,8 @@ NOVEL_PEP="${TD_DIR}/xbMagGiga1.1.novel_transcripts.fa.transdecoder.pep"
 EGGNOG_DB="/LUSTRE/bioinformatica_data/genomica_funcional/rgomez/Trinotate/TRINOTATE_DB/EGGNOG_DATA_DIR"
 
 OUTDIR="${WORDIR}/10_emapper"
-mkdir -p "${OUTDIR}"
+TMPDIR_EMAPPER="${OUTDIR}/tmp"
+mkdir -p "${OUTDIR}" "${TMPDIR_EMAPPER}"   # --temp_dir exige un dir EXISTENTE
 cd "${OUTDIR}"
 
 # ---------------------------- (1) Combinar proteomas ----------------------- #
@@ -72,17 +96,26 @@ if [[ ! -s "${COMBINED_PEP}" ]]; then
         echo "[INFO] No hay proteinas novel (sin TransDecoder output)."
     fi
 
-    # Sanea stops internos '*' que rompen DIAMOND
-    sed -i 's/\*//g' "${COMBINED_PEP}"
+    # Sanea caracteres invalidos SOLO en lineas de secuencia (no en headers):
+    #   '*' = stop codon (TransDecoder los inserta en ORFs '5prime_partial')
+    #   '.' = placeholder por codon ambiguo/incompleto (gffread + TransDecoder)
+    # NOTA: usar '/^>/!' es critico -- los headers 'NOV|MSTRG.1.2.p1' llevan puntos
+    # legitimos que NO deben tocarse; borrarlos rompe la trazabilidad al gene_id.
+    sed -i '/^>/! s/[*.]//g' "${COMBINED_PEP}"
 
     N_TOTAL=$(grep -c '^>' "${COMBINED_PEP}")
     echo "[OK] Proteoma combinado: ${N_TOTAL} secuencias -> ${COMBINED_PEP}"
 else
-    echo "[SKIP] ${COMBINED_PEP} ya existe."
+    # Reaplica la sanitizacion aunque el archivo ya exista: cubre reruns tras
+    # cambios en la regex (evita quedarnos con un pep con '.' sin limpiar).
+    sed -i '/^>/! s/[*.]//g' "${COMBINED_PEP}"
+    echo "[SKIP] ${COMBINED_PEP} ya existe (sanitizacion re-aplicada por seguridad)."
 fi
 
 # ---------------------------- (2) eggNOG-mapper ---------------------------- #
 PREFIX="${OUTDIR}/eggnog_xbMagGiga1.1"
+
+SLURM_CPUS_PER_TASK=64
 
 if [[ -s "${PREFIX}.emapper.annotations" ]]; then
     echo "[SKIP] Anotacion eggnog ya existe (${PREFIX}.emapper.annotations)."
@@ -91,11 +124,11 @@ else
         -i "${COMBINED_PEP}" \
         --itype proteins \
         -m diamond \
-        --cpu "${SLURM_CPUS_PER_TASK}" \
+        --cpu "${SLURM_CPUS_PER_TASK:-16}" \
         --data_dir "${EGGNOG_DB}" \
         --output "$(basename "${PREFIX}")" \
         --output_dir "${OUTDIR}" \
-        --temp_dir "${OUTDIR}/tmp" \
+        --temp_dir "${TMPDIR_EMAPPER}" \
         --go_evidence non-electronic \
         --tax_scope auto \
         --target_orthologs all \

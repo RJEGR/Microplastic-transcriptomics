@@ -12,15 +12,18 @@
 #
 # Dependencia: afterok:<jobid_extract_cds>  (08_extract_cds.slurm)
 ###############################################################################
-#SBATCH --job-name=transdecoder
-#SBATCH --partition=cicese
+#SBATCH --job-name=transdecoder_mp
+#SBATCH --partition=d45
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=24G
 #SBATCH --time=06:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=rgomez41@uabc.edu.mx
 #SBATCH --output=logs/transdecoder_%j.out
 #SBATCH --error=logs/transdecoder_%j.err
+# Nota: la cuenta 'clarissa' solo tiene asociacion SLURM con d15 y d45.
 
 set -euo pipefail
 

@@ -18,15 +18,19 @@
 #
 # Dependencia: afterok:<jobid_stringtie_merge>  (04b_stringtie_merge.slurm)
 ###############################################################################
-#SBATCH --job-name=extract_cds
-#SBATCH --partition=cicese
+#SBATCH --job-name=extract_cds_mp
+#SBATCH --partition=d45
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
+#SBATCH --mail-type=END,FAIL
+#SBATCH --mail-user=rgomez41@uabc.edu.mx
 #SBATCH --output=logs/extract_cds_%j.out
 #SBATCH --error=logs/extract_cds_%j.err
+# Nota: la cuenta 'clarissa' solo tiene asociacion SLURM con d15 (MaxJobs=2)
+# y d45 (sin limite). Ver sacctmgr show assoc user=$USER.
 
 set -euo pipefail
 
